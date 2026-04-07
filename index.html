@@ -573,27 +573,6 @@
       `;
     }
 
-    function rowLooksReportable(row) {
-      const payout = num(row["TOTAL PAYOUT"]);
-      const tax = getRowTaxTotal(row);
-      const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
-
-      if (payout <= 0) return false;
-      if (tax <= 0) return false;
-
-      if (!source) return true;
-      if (source.includes("airbnb")) return false;
-
-      const keepSource =
-        source.includes("vrbo") ||
-        source.includes("homeaway") ||
-        source.includes("direct") ||
-        source.includes("website") ||
-        source.includes("manual");
-
-      return keepSource;
-    }
-
     async function runReport() {
       document.getElementById("cards").style.display = "none";
       document.getElementById("tableWrap").innerHTML = "";
@@ -605,11 +584,9 @@
         const rows = await fetchGuestyRowsPaged();
         const { from, to } = getDateRange(month, year);
 
-        const filtered = rows.filter(row => {
+        const monthRows = rows.filter(row => {
           const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
-          if (!checkIn) return false;
-          if (checkIn < from || checkIn > to) return false;
-          return rowLooksReportable(row);
+          return checkIn && checkIn >= from && checkIn <= to;
         });
 
         const byProperty = {};
@@ -617,16 +594,16 @@
         let totalAmount = 0;
         let totalTax = 0;
 
-        filtered.forEach(row => {
+        monthRows.forEach(row => {
           const propertyName =
             (row["LISTING'S NICKNAME"] || "").toString().trim() ||
             (row["PROPERTY ADDRESS"] || "").toString().trim() ||
             "Unknown";
 
           const city = (row["CITY"] || "").toString().trim();
+          const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
           const payout = num(row["TOTAL PAYOUT"]);
           const tax = getRowTaxTotal(row);
-          const amountToReport = Math.max(0, payout - tax);
 
           if (!byProperty[propertyName]) {
             byProperty[propertyName] = {
@@ -637,12 +614,27 @@
             };
           }
 
-          byProperty[propertyName].amountToReport += amountToReport;
-          byProperty[propertyName].totalTax += tax;
-
           totalReservations++;
-          totalAmount += amountToReport;
-          totalTax += tax;
+
+          const isAirbnb = source.includes("airbnb");
+          const isAllowedSource =
+            !isAirbnb && (
+              !source ||
+              source.includes("vrbo") ||
+              source.includes("homeaway") ||
+              source.includes("direct") ||
+              source.includes("website") ||
+              source.includes("manual")
+            );
+
+          if (isAllowedSource && tax > 0) {
+            const amountToReport = Math.max(0, payout - tax);
+            byProperty[propertyName].amountToReport += amountToReport;
+            byProperty[propertyName].totalTax += tax;
+
+            totalAmount += amountToReport;
+            totalTax += tax;
+          }
         });
 
         const keys = Object.keys(byProperty).sort((a, b) => a.localeCompare(b));
@@ -654,8 +646,8 @@
         document.getElementById("sumTax").textContent = money(totalTax);
 
         if (!keys.length) {
-          renderEmptyTable("No matching taxed reservations found for this month.");
-          showStatus("Information loaded. 0 matching reservations found.", "ok");
+          renderEmptyTable("No reservations found for this month.");
+          showStatus("Information loaded. 0 reservations found.", "ok");
           return;
         }
 
