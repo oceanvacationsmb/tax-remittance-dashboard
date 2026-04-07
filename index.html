@@ -642,13 +642,13 @@
           return;
         }
 
-       function groupKey(reportTo) {
+      function groupKey(reportTo) {
   const key = (reportTo || "").toUpperCase();
 
-  if (key.includes("MB")) return "SC, MB, HORRY";
   if (key.includes("NMB")) return "SC, NMB, HORRY";
   if (key.includes("SSB")) return "SC, SSB, HORRY";
   if (key.includes("GTC")) return "SC, GTC";
+  if (key.includes("MB")) return "SC, MB, HORRY";
   return "SC, HORRY";
 }
 
