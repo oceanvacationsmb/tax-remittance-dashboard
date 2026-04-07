@@ -642,58 +642,26 @@
           return;
         }
 
-        function groupKey(reportTo) {
-  const key = (reportTo || "").toUpperCase();
+        let html = "<table>";
+        html += "<tr><th>Property Name</th><th>Report Tax To</th><th class='right'>Amount To Report</th><th class='right'>Total Tax</th></tr>";
 
-  if (key.includes("MB")) return "SC, MB, HORRY";
-  if (key.includes("NMB")) return "SC, NMB, HORRY";
-  if (key.includes("SSB")) return "SC, SSB, HORRY";
-  if (key.includes("GTC")) return "SC, GTC";
-  return "SC, HORRY";
-}
+        keys.forEach(key => {
+          const item = byProperty[key];
+          html += "<tr>";
+          html += "<td>" + escapeHtml(item.property) + "</td>";
+          html += "<td>" + escapeHtml(item.reportTo) + "</td>";
+          html += "<td class='right'>" + money(item.amountToReport) + "</td>";
+          html += "<td class='right'>" + money(item.totalTax) + "</td>";
+          html += "</tr>";
+        });
 
-const groups = {
-  "SC, MB, HORRY": [],
-  "SC, NMB, HORRY": [],
-  "SC, SSB, HORRY": [],
-  "SC, HORRY": [],
-  "SC, GTC": []
-};
-
-keys.forEach(key => {
-  const item = byProperty[key];
-  const g = groupKey(item.reportTo);
-  if (!groups[g]) groups[g] = [];
-  groups[g].push(item);
-});
-
-let html = "";
-
-Object.keys(groups).forEach(groupName => {
-  const list = groups[groupName];
-
-  if (!list.length) return;
-
-  html += `<h2 style="margin-top:30px;">${groupName}</h2>`;
-  html += "<table>";
-  html += "<tr><th>Property Name</th><th class='right'>Amount To Report</th><th class='right'>Total Tax</th></tr>";
-
-  let subAmount = 0;
-  let subTax = 0;
-
-  list.sort((a,b)=>a.property.localeCompare(b.property)).forEach(item => {
-    html += "<tr>";
-    html += "<td>" + escapeHtml(item.property) + "</td>";
-    html += "<td class='right'>" + money(item.amountToReport) + "</td>";
-    html += "<td class='right'>" + money(item.totalTax) + "</td>";
-    html += "</tr>";
-
-    subAmount += item.amountToReport;
-    subTax += item.totalTax;
-  });
-
-  html += "<tr>";
-  html += "<th>Total</th
+        html += "<tr>";
+        html += "<th>Total</th>";
+        html += "<th></th>";
+        html += "<th class='right'>" + money(totalAmount) + "</th>";
+        html += "<th class='right'>" + money(totalTax) + "</th>";
+        html += "</tr>";
+        html += "</table>";
 
         document.getElementById("tableWrap").innerHTML = html;
         showStatus("Information loaded successfully.", "ok");
