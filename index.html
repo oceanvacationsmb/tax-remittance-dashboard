@@ -6,14 +6,12 @@
   <title>Report Taxes</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: Arial, sans-serif;
       background: #f4f6f8;
       color: #16313a;
       padding: 24px;
     }
-
     .wrap {
       max-width: 1500px;
       margin: 0 auto;
@@ -23,14 +21,12 @@
       padding: 24px;
       box-shadow: 0 8px 24px rgba(0,0,0,.06);
     }
-
     h1 {
       text-align: center;
       font-size: 34px;
       margin-bottom: 18px;
       letter-spacing: .5px;
     }
-
     .toolbar {
       display: grid;
       grid-template-columns: 180px 180px 220px;
@@ -39,7 +35,6 @@
       justify-content: center;
       margin-bottom: 20px;
     }
-
     label {
       display: block;
       font-size: 12px;
@@ -48,7 +43,6 @@
       margin-bottom: 6px;
       text-transform: uppercase;
     }
-
     select, button {
       width: 100%;
       padding: 11px 12px;
@@ -57,7 +51,6 @@
       font-size: 14px;
       background: #fff;
     }
-
     button {
       border: none;
       background: #0d5c4b;
@@ -65,11 +58,7 @@
       font-weight: bold;
       cursor: pointer;
     }
-
-    button:hover {
-      background: #0b4e40;
-    }
-
+    button:hover { background: #0b4e40; }
     .status {
       display: none;
       margin-bottom: 16px;
@@ -78,34 +67,29 @@
       font-size: 14px;
       white-space: pre-wrap;
     }
-
     .status.show { display: block; }
     .status.ok {
       background: #e9f7ee;
       border: 1px solid #badfc5;
       color: #1a6b39;
     }
-
     .status.error {
       background: #fde9e9;
       border: 1px solid #eebaba;
       color: #a12222;
     }
-
     .cards {
       display: grid;
       grid-template-columns: repeat(4, minmax(180px, 1fr));
       gap: 12px;
       margin-bottom: 22px;
     }
-
     .card {
       border: 1px solid #d8e2e7;
       border-radius: 10px;
       background: #fbfdfe;
       padding: 16px;
     }
-
     .card-label {
       font-size: 11px;
       font-weight: bold;
@@ -113,45 +97,43 @@
       text-transform: uppercase;
       margin-bottom: 8px;
     }
-
     .card-value {
       font-size: 24px;
       font-weight: bold;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
     }
-
     th, td {
       border: 1px solid #d8e2e7;
       padding: 10px 12px;
       text-align: left;
       font-size: 14px;
     }
-
     th {
       background: #eef4f7;
       text-transform: uppercase;
       font-size: 12px;
     }
-
-    td.right, th.right {
-      text-align: right;
-    }
-
-    tr:nth-child(even) {
-      background: #fafcfd;
-    }
-
+    td.right, th.right { text-align: right; }
+    tr:nth-child(even) { background: #fafcfd; }
     .note {
       margin-top: 14px;
       font-size: 12px;
       color: #61767f;
     }
-
+    .debug {
+      margin-top: 14px;
+      padding: 12px;
+      background: #f8fafc;
+      border: 1px solid #d8e2e7;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #425962;
+      line-height: 1.5;
+    }
     @media (max-width: 980px) {
       .toolbar { grid-template-columns: 1fr; }
       .cards { grid-template-columns: 1fr 1fr; }
@@ -198,9 +180,10 @@
     </div>
 
     <div id="tableWrap"></div>
+    <div id="debugWrap"></div>
 
     <div class="note">
-      Report Tax To is based on city parsed from Guesty city first, then from address if city is blank.
+      This version paginates Guesty results and parses city from address when city is blank.
     </div>
   </div>
 
@@ -251,7 +234,6 @@
       if (!obj || !path) return undefined;
       const keys = path.split(".");
       let cur = obj;
-
       for (const key of keys) {
         if (cur === undefined || cur === null || typeof cur !== "object" || !(key in cur)) {
           return undefined;
@@ -263,31 +245,21 @@
 
     function extractGuestyMoneyValue(raw) {
       if (raw === undefined || raw === null || raw === "") return 0;
-
-      if (typeof raw === "number" || typeof raw === "string") {
-        return num(raw);
-      }
-
+      if (typeof raw === "number" || typeof raw === "string") return num(raw);
       if (typeof raw === "object") {
         if (raw.value !== undefined && raw.value !== null) return num(raw.value);
         if (raw.children !== undefined && raw.children !== null && typeof raw.children !== "object") {
           return num(raw.children);
         }
       }
-
       return 0;
     }
 
     function guestyText(obj, path) {
       const direct = obj ? obj[path] : undefined;
       const raw = (direct !== undefined && direct !== null) ? direct : getNestedValue(obj, path);
-
       if (raw === undefined || raw === null) return "";
-
-      if (typeof raw === "string" || typeof raw === "number") {
-        return String(raw).trim();
-      }
-
+      if (typeof raw === "string" || typeof raw === "number") return String(raw).trim();
       if (typeof raw === "object") {
         if (raw.children !== undefined && raw.children !== null) {
           if (typeof raw.children === "string" || typeof raw.children === "number") {
@@ -298,7 +270,6 @@
           return String(raw.value).trim();
         }
       }
-
       return "";
     }
 
@@ -313,18 +284,14 @@
         getNestedValue(r, "money.invoiceItems.children") ||
         getNestedValue(r, "invoiceItems.children") ||
         [];
-
       if (Array.isArray(directArray)) return directArray;
-
       if (Array.isArray(r["money.invoiceItems"])) return r["money.invoiceItems"];
       if (Array.isArray(r.invoiceItems)) return r.invoiceItems;
-
       return [];
     }
 
     function getInvoiceItemsTaxTotal(r) {
       const items = getInvoiceItemsArray(r);
-
       return items.reduce((sum, item) => {
         const title = ((item && item.title) || "").toString().toLowerCase();
         const name = ((item && item.name) || "").toString().toLowerCase();
@@ -340,7 +307,7 @@
           label.includes("occupancy") ||
           label.includes("tourism") ||
           label.includes("lodging") ||
-          label.includes("accommodation tax");
+          label.includes("accommodation");
 
         if (!isTaxLike) return sum;
         return sum + Math.max(0, val);
@@ -349,14 +316,12 @@
 
     function parseCityFromAddress(address) {
       const a = (address || "").toLowerCase();
-
       if (a.includes("north myrtle beach")) return "North Myrtle Beach";
       if (a.includes("myrtle beach")) return "Myrtle Beach";
       if (a.includes("surfside beach")) return "Surfside Beach";
       if (a.includes("garden city")) return "Garden City";
       if (a.includes("murrells inlet")) return "Murrells Inlet";
       if (a.includes("conway")) return "Conway";
-
       return "";
     }
 
@@ -412,12 +377,6 @@
           guestyText(r, "checkIn") ||
           "",
 
-        "CHECK-OUT DATE":
-          (r.checkOutDate && r.checkOutDate.value) ||
-          guestyText(r, "checkOutDate.value") ||
-          guestyText(r, "checkOut") ||
-          "",
-
         "LISTING'S NICKNAME":
           (r["listing.nickname"] && r["listing.nickname"].children) ||
           guestyText(r, "listing.nickname.children") ||
@@ -442,16 +401,11 @@
     }
 
     function getRowTaxTotal(row) {
-      const detailedKeys = [
-        "CITY TAX", "STATE TAX", "COUNTY TAX", "OCCUPANCY TAX",
-        "CITY TAXES", "STATE TAXES", "COUNTY TAXES", "OCCUPANCY TAXES",
-        "ACCOMMODATION TAX", "TOURISM TAX", "LODGING TAX"
-      ];
-
-      const taxesCombined = num(row["TAXES"]);
-      const detailedTaxesCombined = detailedKeys.reduce((sum, key) => sum + num(row[key]), 0);
-
-      return Math.max(0, taxesCombined, detailedTaxesCombined);
+      return Math.max(
+        0,
+        num(row["TAXES"]),
+        num(row["CITY TAX"]) + num(row["STATE TAX"]) + num(row["COUNTY TAX"]) + num(row["OCCUPANCY TAX"])
+      );
     }
 
     function getReportTaxTo(city) {
@@ -469,32 +423,49 @@
       return [];
     }
 
-    async function fetchGuestyRows() {
+    async function fetchGuestyRowsPaged() {
       const apiKey = extractApiKeyFromUrl(REPORT_URL);
       if (!apiKey) throw new Error("Missing apiKey in Guesty URL");
 
-      const endpoint = "https://report.guesty.com/api/shared-reservations-reports?timezone=America/New_York&skip=0&limit=1000";
+      const limit = 1000;
+      let skip = 0;
+      let all = [];
+      let page = 0;
 
-      const res = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          "accept": "*/*",
-          "authorization": apiKey,
-          "content-type": "application/json"
-        }
-      });
+      while (true) {
+        const endpoint = `https://report.guesty.com/api/shared-reservations-reports?timezone=America/New_York&skip=${skip}&limit=${limit}`;
 
-      if (!res.ok) throw new Error("Guesty fetch failed: " + res.status);
+        const res = await fetch(endpoint, {
+          method: "GET",
+          headers: {
+            "accept": "*/*",
+            "authorization": apiKey,
+            "content-type": "application/json"
+          }
+        });
 
-      const payload = await res.json();
-      const rows = normalizeRowsFromPayload(payload);
-      return rows.map(mapGuestyReservation);
+        if (!res.ok) throw new Error("Guesty fetch failed: " + res.status);
+
+        const payload = await res.json();
+        const rows = normalizeRowsFromPayload(payload);
+
+        if (!Array.isArray(rows) || rows.length === 0) break;
+
+        all = all.concat(rows);
+        page++;
+
+        if (rows.length < limit) break;
+        skip += limit;
+
+        if (page > 50) break;
+      }
+
+      return all.map(mapGuestyReservation);
     }
 
     function getDateRange(month, year) {
       const mm = String(month).padStart(2, "0");
       const last = new Date(year, month, 0).getDate();
-
       return {
         from: `${year}-${mm}-01`,
         to: `${year}-${mm}-${String(last).padStart(2, "0")}`
@@ -517,18 +488,35 @@
       `;
     }
 
+    function renderDebug(rows, filtered) {
+      const uniqueProps = [...new Set(rows.map(r =>
+        ((r["LISTING'S NICKNAME"] || "").trim() || (r["PROPERTY ADDRESS"] || "").trim() || "Unknown")
+      ))].sort();
+
+      const uniqueSources = [...new Set(rows.map(r => ((r["SOURCE"] || "") + "").trim()).filter(Boolean))].sort();
+
+      document.getElementById("debugWrap").innerHTML = `
+        <div class="debug">
+          <div><strong>Total fetched rows:</strong> ${rows.length}</div>
+          <div><strong>Filtered rows:</strong> ${filtered.length}</div>
+          <div><strong>Unique properties fetched:</strong> ${uniqueProps.length}</div>
+          <div><strong>Property sample:</strong> ${escapeHtml(uniqueProps.slice(0, 20).join(" | "))}</div>
+          <div><strong>Sources found:</strong> ${escapeHtml(uniqueSources.join(" | "))}</div>
+        </div>
+      `;
+    }
+
     async function runReport() {
       document.getElementById("cards").style.display = "none";
       document.getElementById("tableWrap").innerHTML = "";
+      document.getElementById("debugWrap").innerHTML = "";
       showStatus("Loading Guesty data...", "ok");
 
       try {
         const month = parseInt(document.getElementById("monthSelect").value, 10);
         const year = parseInt(document.getElementById("yearSelect").value, 10);
-        const rows = await fetchGuestyRows();
+        const rows = await fetchGuestyRowsPaged();
         const { from, to } = getDateRange(month, year);
-
-        console.log("RAW MAPPED ROWS", rows.slice(0, 10));
 
         const filtered = rows.filter(row => {
           const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
@@ -554,7 +542,7 @@
           return true;
         });
 
-        console.log("FILTERED ROWS", filtered.slice(0, 20));
+        renderDebug(rows, filtered);
 
         const byProperty = {};
         let totalReservations = 0;
@@ -638,10 +626,8 @@
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
       ];
-
       const sel = document.getElementById("monthSelect");
       sel.innerHTML = "";
-
       months.forEach((name, index) => {
         const option = document.createElement("option");
         option.value = index + 1;
@@ -653,7 +639,6 @@
     function populateYearDropdown() {
       const sel = document.getElementById("yearSelect");
       sel.innerHTML = "";
-
       const currentYear = new Date().getFullYear();
       for (let y = currentYear + 1; y >= 2023; y--) {
         const option = document.createElement("option");
