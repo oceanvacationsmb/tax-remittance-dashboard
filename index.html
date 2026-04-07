@@ -5,128 +5,164 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Report Taxes</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:Arial,sans-serif;
-      background:#f4f6f8;
-      color:#16313a;
-      padding:24px;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      color: #16313a;
+      padding: 24px;
     }
-    .wrap{
-      max-width:1500px;
-      margin:0 auto;
-      background:#fff;
-      border:1px solid #d7e1e6;
-      border-radius:14px;
-      padding:24px;
-      box-shadow:0 8px 24px rgba(0,0,0,.06);
+
+    .wrap {
+      max-width: 1500px;
+      margin: 0 auto;
+      background: #fff;
+      border: 1px solid #d7e1e6;
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.06);
     }
-    h1{
-      text-align:center;
-      font-size:34px;
-      margin-bottom:18px;
-      letter-spacing:.5px;
+
+    h1 {
+      text-align: center;
+      font-size: 34px;
+      margin-bottom: 18px;
+      letter-spacing: .5px;
     }
-    .toolbar{
-      display:grid;
-      grid-template-columns:180px 180px 220px;
-      gap:12px;
-      align-items:end;
-      justify-content:center;
-      margin-bottom:20px;
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: 180px 180px 220px;
+      gap: 12px;
+      align-items: end;
+      justify-content: center;
+      margin-bottom: 20px;
     }
-    label{
-      display:block;
-      font-size:12px;
-      font-weight:bold;
-      color:#4a6871;
-      margin-bottom:6px;
-      text-transform:uppercase;
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      color: #4a6871;
+      margin-bottom: 6px;
+      text-transform: uppercase;
     }
-    select,button{
-      width:100%;
-      padding:11px 12px;
-      border-radius:8px;
-      border:1px solid #ccd7dc;
-      font-size:14px;
-      background:#fff;
+
+    select, button {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 8px;
+      border: 1px solid #ccd7dc;
+      font-size: 14px;
+      background: #fff;
     }
-    button{
-      border:none;
-      background:#0d5c4b;
-      color:#fff;
-      font-weight:bold;
-      cursor:pointer;
+
+    button {
+      border: none;
+      background: #0d5c4b;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
     }
-    button:hover{background:#0b4e40}
-    .status{
-      display:none;
-      margin-bottom:16px;
-      padding:12px 14px;
-      border-radius:8px;
-      font-size:14px;
-      white-space:pre-wrap;
+
+    button:hover {
+      background: #0b4e40;
     }
-    .status.show{display:block}
-    .status.ok{
-      background:#e9f7ee;
-      border:1px solid #badfc5;
-      color:#1a6b39;
+
+    .status {
+      display: none;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      white-space: pre-wrap;
     }
-    .status.error{
-      background:#fde9e9;
-      border:1px solid #eebaba;
-      color:#a12222;
+
+    .status.show {
+      display: block;
     }
-    .cards{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(180px,1fr));
-      gap:12px;
-      margin-bottom:22px;
+
+    .status.ok {
+      background: #e9f7ee;
+      border: 1px solid #badfc5;
+      color: #1a6b39;
     }
-    .card{
-      border:1px solid #d8e2e7;
-      border-radius:10px;
-      background:#fbfdfe;
-      padding:16px;
+
+    .status.error {
+      background: #fde9e9;
+      border: 1px solid #eebaba;
+      color: #a12222;
     }
-    .card-label{
-      font-size:11px;
-      font-weight:bold;
-      color:#607983;
-      text-transform:uppercase;
-      margin-bottom:8px;
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 22px;
     }
-    .card-value{
-      font-size:24px;
-      font-weight:bold;
+
+    .card {
+      border: 1px solid #d8e2e7;
+      border-radius: 10px;
+      background: #fbfdfe;
+      padding: 16px;
     }
-    table{
-      width:100%;
-      border-collapse:collapse;
-      margin-top:10px;
+
+    .card-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #607983;
+      text-transform: uppercase;
+      margin-bottom: 8px;
     }
-    th,td{
-      border:1px solid #d8e2e7;
-      padding:10px 12px;
-      text-align:left;
-      font-size:14px;
+
+    .card-value {
+      font-size: 24px;
+      font-weight: bold;
     }
-    th{
-      background:#eef4f7;
-      text-transform:uppercase;
-      font-size:12px;
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
     }
-    td.right, th.right{text-align:right}
-    tr:nth-child(even){background:#fafcfd}
-    .note{
-      margin-top:14px;
-      font-size:12px;
-      color:#61767f;
+
+    th, td {
+      border: 1px solid #d8e2e7;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 14px;
     }
-    @media(max-width:980px){
-      .toolbar{grid-template-columns:1fr}
-      .cards{grid-template-columns:1fr 1fr}
+
+    th {
+      background: #eef4f7;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    td.right, th.right {
+      text-align: right;
+    }
+
+    tr:nth-child(even) {
+      background: #fafcfd;
+    }
+
+    .note {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #61767f;
+    }
+
+    @media (max-width: 980px) {
+      .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .cards {
+        grid-template-columns: 1fr 1fr;
+      }
     }
   </style>
 </head>
@@ -188,11 +224,11 @@
       "conway": "SC, HC"
     };
 
-    function num(v){
+    function num(v) {
       return parseFloat((v || "0").toString().replace(/[$,]/g, "")) || 0;
     }
 
-    function money(v){
+    function money(v) {
       const n = parseFloat(v) || 0;
       return "$" + n.toLocaleString("en-US", {
         minimumFractionDigits: 2,
@@ -200,7 +236,7 @@
       });
     }
 
-    function escapeHtml(v){
+    function escapeHtml(v) {
       return String(v || "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -209,59 +245,90 @@
         .replace(/'/g, "&#39;");
     }
 
-    function showStatus(message, type){
+    function showStatus(message, type) {
       const el = document.getElementById("status");
       el.className = "status show " + (type || "");
       el.textContent = message;
     }
 
-    function extractApiKeyFromUrl(url){
+    function extractApiKeyFromUrl(url) {
       return (url.split("apiKey=")[1] || "").split("&")[0];
     }
 
-    function getNestedValue(obj, path){
-      if(!obj || !path) return undefined;
+    function getNestedValue(obj, path) {
+      if (!obj || !path) return undefined;
       const keys = path.split(".");
       let cur = obj;
-      for(const key of keys){
-        if(cur === undefined || cur === null || typeof cur !== "object" || !(key in cur)) return undefined;
+
+      for (const key of keys) {
+        if (cur === undefined || cur === null || typeof cur !== "object" || !(key in cur)) {
+          return undefined;
+        }
         cur = cur[key];
       }
+
       return cur;
     }
 
-    function extractGuestyMoneyValue(raw){
-      if(raw === undefined || raw === null || raw === "") return 0;
-      if(typeof raw === "number" || typeof raw === "string") return num(raw);
-      if(typeof raw === "object"){
-        if(raw.value !== undefined && raw.value !== null) return num(raw.value);
-        if(raw.children !== undefined && raw.children !== null && typeof raw.children !== "object") return num(raw.children);
+    function extractGuestyMoneyValue(raw) {
+      if (raw === undefined || raw === null || raw === "") return 0;
+
+      if (typeof raw === "number" || typeof raw === "string") {
+        return num(raw);
       }
+
+      if (typeof raw === "object") {
+        if (raw.value !== undefined && raw.value !== null) {
+          return num(raw.value);
+        }
+
+        if (raw.children !== undefined && raw.children !== null && typeof raw.children !== "object") {
+          return num(raw.children);
+        }
+      }
+
       return 0;
     }
 
-    function guestyValue(r, field){
-      const direct = r ? r[field] : undefined;
-      const raw = (direct !== undefined && direct !== null) ? direct : getNestedValue(r, field);
-      return extractGuestyMoneyValue(raw);
-    }
+    function guestyText(obj, path) {
+      const direct = obj ? obj[path] : undefined;
+      const raw = (direct !== undefined && direct !== null) ? direct : getNestedValue(obj, path);
 
-    function guestyText(r, field){
-      const direct = r ? r[field] : undefined;
-      const raw = (direct !== undefined && direct !== null) ? direct : getNestedValue(r, field);
-      if(raw === undefined || raw === null) return "";
-      if(typeof raw === "string" || typeof raw === "number") return String(raw).trim();
-      if(typeof raw === "object"){
-        if(raw.children !== undefined && raw.children !== null) return String(raw.children).trim();
-        if(raw.value !== undefined && raw.value !== null) return String(raw.value).trim();
+      if (raw === undefined || raw === null) return "";
+
+      if (typeof raw === "string" || typeof raw === "number") {
+        return String(raw).trim();
       }
+
+      if (typeof raw === "object") {
+        if (raw.children !== undefined && raw.children !== null) {
+          if (typeof raw.children === "string" || typeof raw.children === "number") {
+            return String(raw.children).trim();
+          }
+        }
+
+        if (raw.value !== undefined && raw.value !== null) {
+          return String(raw.value).trim();
+        }
+      }
+
       return "";
     }
 
-    function mapGuestyReservation(r){
+    function guestyValue(obj, path) {
+      const direct = obj ? obj[path] : undefined;
+      const raw = (direct !== undefined && direct !== null) ? direct : getNestedValue(obj, path);
+      return extractGuestyMoneyValue(raw);
+    }
+
+    function mapGuestyReservation(r) {
       const propertyAddress =
         guestyText(r, "listing.address.full") ||
-        guestyText(r, "listing.address");
+        guestyText(r, "listing.address") ||
+        guestyText(r, "customFields.68e44b138e7b460011d90661") ||
+        guestyText(r, "customFields.68e44b138e7b460011d90661.value") ||
+        guestyText(r, "customFields.68e44b138e7b460011d90661.children") ||
+        "";
 
       const cityTax = Math.max(
         guestyValue(r, "money.invoiceItems.CITY_TAX"),
@@ -284,75 +351,73 @@
       );
 
       return {
-        checkIn:
-          guestyText(r, "checkIn") ||
+        "CHECK-IN DATE":
+          (r.checkInDate && r.checkInDate.value) ||
           guestyText(r, "checkInDate.value") ||
-          guestyText(r, "checkInDate"),
+          guestyText(r, "checkIn") ||
+          "",
 
-        propertyName:
+        "CHECK-OUT DATE":
+          (r.checkOutDate && r.checkOutDate.value) ||
+          guestyText(r, "checkOutDate.value") ||
+          guestyText(r, "checkOut") ||
+          "",
+
+        "LISTING'S NICKNAME":
+          (r["listing.nickname"] && r["listing.nickname"].children) ||
+          guestyText(r, "listing.nickname.children") ||
           guestyText(r, "listing.nickname") ||
-          propertyAddress ||
-          "Unknown",
+          "",
 
-        address: propertyAddress,
+        "PROPERTY ADDRESS": propertyAddress,
 
-        city:
+        "CITY":
           guestyText(r, "listing.address.city") ||
           "",
 
-        source:
+        "SOURCE":
           guestyText(r, "source"),
 
-        grossPayout:
+        "TOTAL PAYOUT":
           guestyValue(r, "money.hostPayout") ||
           guestyValue(r, "totalPayout"),
 
-        cityTax: cityTax,
-        stateTax: stateTax,
-        countyTax: countyTax,
-        occupancyTax: occupancyTax
+        "CITY TAX": cityTax,
+        "STATE TAX": stateTax,
+        "COUNTY TAX": countyTax,
+        "OCCUPANCY TAX": occupancyTax
       };
     }
 
-    function getRowTaxTotal(row){
+    function getRowTaxTotal(row) {
       return (
-        num(row.cityTax) +
-        num(row.stateTax) +
-        num(row.countyTax) +
-        num(row.occupancyTax)
+        num(row["CITY TAX"]) +
+        num(row["STATE TAX"]) +
+        num(row["COUNTY TAX"]) +
+        num(row["OCCUPANCY TAX"])
       );
     }
 
-    function isVrboOrDirect(row){
-      const source = (row.source || "").toLowerCase().trim();
-      if(!source) return false;
-      if(source.includes("airbnb")) return false;
-      return (
-        source.includes("vrbo") ||
-        source.includes("direct") ||
-        source.includes("website") ||
-        source.includes("manual")
-      );
-    }
-
-    function getReportTaxTo(city){
+    function getReportTaxTo(city) {
       const key = (city || "").toLowerCase().trim();
       return CITY_REPORT_MAP[key] || "SC, HC";
     }
 
-    function normalizeRowsFromPayload(payload){
-      if(Array.isArray(payload)) return payload;
-      if(Array.isArray(payload.results)) return payload.results;
-      if(Array.isArray(payload.data)) return payload.data;
-      if(payload.data && Array.isArray(payload.data.results)) return payload.data.results;
-      if(payload.data && Array.isArray(payload.data.rows)) return payload.data.rows;
-      if(Array.isArray(payload.rows)) return payload.rows;
+    function normalizeRowsFromPayload(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload.results)) return payload.results;
+      if (Array.isArray(payload.data)) return payload.data;
+      if (payload.data && Array.isArray(payload.data.results)) return payload.data.results;
+      if (payload.data && Array.isArray(payload.data.rows)) return payload.data.rows;
+      if (Array.isArray(payload.rows)) return payload.rows;
       return [];
     }
 
-    async function fetchGuestyRows(){
+    async function fetchGuestyRows() {
       const apiKey = extractApiKeyFromUrl(REPORT_URL);
-      if(!apiKey) throw new Error("Missing apiKey in Guesty URL");
+      if (!apiKey) {
+        throw new Error("Missing apiKey in Guesty URL");
+      }
 
       const endpoint = "https://report.guesty.com/api/shared-reservations-reports?timezone=America/New_York&skip=0&limit=1000";
 
@@ -365,7 +430,7 @@
         }
       });
 
-      if(!res.ok){
+      if (!res.ok) {
         throw new Error("Guesty fetch failed: " + res.status);
       }
 
@@ -374,16 +439,17 @@
       return rows.map(mapGuestyReservation);
     }
 
-    function getDateRange(month, year){
+    function getDateRange(month, year) {
       const mm = String(month).padStart(2, "0");
       const last = new Date(year, month, 0).getDate();
+
       return {
         from: `${year}-${mm}-01`,
         to: `${year}-${mm}-${String(last).padStart(2, "0")}`
       };
     }
 
-    function renderEmptyTable(message){
+    function renderEmptyTable(message) {
       document.getElementById("tableWrap").innerHTML = `
         <table>
           <tr>
@@ -399,27 +465,41 @@
       `;
     }
 
-    async function runReport(){
+    async function runReport() {
       document.getElementById("cards").style.display = "none";
       document.getElementById("tableWrap").innerHTML = "";
       showStatus("Loading Guesty data...", "ok");
 
-      try{
+      try {
         const month = parseInt(document.getElementById("monthSelect").value, 10);
         const year = parseInt(document.getElementById("yearSelect").value, 10);
         const rows = await fetchGuestyRows();
         const { from, to } = getDateRange(month, year);
 
+        console.log("RAW MAPPED ROWS", rows.slice(0, 10));
+
         const filtered = rows.filter(row => {
+          const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
+          const payout = num(row["TOTAL PAYOUT"]);
           const tax = getRowTaxTotal(row);
-          return (
-            row.checkIn &&
-            row.checkIn >= from &&
-            row.checkIn <= to &&
-            isVrboOrDirect(row) &&
-            num(row.grossPayout) > 0 &&
-            tax > 0
-          );
+          const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
+
+          if (!checkIn) return false;
+          if (checkIn < from || checkIn > to) return false;
+          if (!source) return false;
+          if (source.includes("airbnb")) return false;
+
+          const keepSource =
+            source.includes("vrbo") ||
+            source.includes("direct") ||
+            source.includes("website") ||
+            source.includes("manual");
+
+          if (!keepSource) return false;
+          if (payout <= 0) return false;
+          if (tax <= 0) return false;
+
+          return true;
         });
 
         const byProperty = {};
@@ -428,14 +508,20 @@
         let totalTax = 0;
 
         filtered.forEach(row => {
-          const propertyName = row.propertyName || "Unknown";
-          const tax = getRowTaxTotal(row);
-          const amountToReport = Math.max(0, num(row.grossPayout) - tax);
+          const propertyName =
+            (row["LISTING'S NICKNAME"] || "").toString().trim() ||
+            (row["PROPERTY ADDRESS"] || "").toString().trim() ||
+            "Unknown";
 
-          if(!byProperty[propertyName]){
+          const city = (row["CITY"] || "").toString().trim();
+          const payout = num(row["TOTAL PAYOUT"]);
+          const tax = getRowTaxTotal(row);
+          const amountToReport = Math.max(0, payout - tax);
+
+          if (!byProperty[propertyName]) {
             byProperty[propertyName] = {
               property: propertyName,
-              reportTo: getReportTaxTo(row.city),
+              reportTo: getReportTaxTo(city),
               amountToReport: 0,
               totalTax: 0
             };
@@ -449,7 +535,7 @@
           totalTax += tax;
         });
 
-        const keys = Object.keys(byProperty).sort((a,b) => a.localeCompare(b));
+        const keys = Object.keys(byProperty).sort((a, b) => a.localeCompare(b));
 
         document.getElementById("cards").style.display = "";
         document.getElementById("sumProperties").textContent = keys.length;
@@ -457,7 +543,7 @@
         document.getElementById("sumAmount").textContent = money(totalAmount);
         document.getElementById("sumTax").textContent = money(totalTax);
 
-        if(!keys.length){
+        if (!keys.length) {
           renderEmptyTable("No matching taxed VRBO / Direct / Website / Manual reservations found for this month.");
           showStatus("Information loaded. 0 matching reservations found.", "ok");
           return;
@@ -486,20 +572,22 @@
 
         document.getElementById("tableWrap").innerHTML = html;
         showStatus("Information loaded successfully.", "ok");
-      } catch(err){
+      } catch (err) {
         renderEmptyTable("Could not load data.");
         showStatus(err.message || "Failed loading report", "error");
         console.error(err);
       }
     }
 
-    function populateMonthDropdown(){
+    function populateMonthDropdown() {
       const months = [
-        "January","February","March","April","May","June",
-        "July","August","September","October","November","December"
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
       ];
+
       const sel = document.getElementById("monthSelect");
       sel.innerHTML = "";
+
       months.forEach((name, index) => {
         const option = document.createElement("option");
         option.value = index + 1;
@@ -508,11 +596,12 @@
       });
     }
 
-    function populateYearDropdown(){
+    function populateYearDropdown() {
       const sel = document.getElementById("yearSelect");
       sel.innerHTML = "";
+
       const currentYear = new Date().getFullYear();
-      for(let y = currentYear + 1; y >= 2023; y--){
+      for (let y = currentYear + 1; y >= 2023; y--) {
         const option = document.createElement("option");
         option.value = y;
         option.textContent = y;
