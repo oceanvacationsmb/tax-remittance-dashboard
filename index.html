@@ -63,6 +63,7 @@
       padding:12px 14px;
       border-radius:8px;
       font-size:14px;
+      white-space:pre-wrap;
     }
     .status.show{display:block}
     .status.ok{
@@ -145,7 +146,7 @@
         <input id="year" type="number" min="2020" max="2100" />
       </div>
       <div>
-        <button id="runBtn">RUN REPORT</button>
+        <button id="runBtn" type="button">RUN REPORT</button>
       </div>
     </div>
 
@@ -178,16 +179,8 @@
   </div>
 
   <script>
-    // =========================================================
-    // 1) PASTE YOUR REPORT URL HERE
-    // =========================================================
-    const DEFAULT_REPORT_URL = "https://report.guesty.com/apps/reservations?apiKey=b85a2d1c4f355f5f041c70eadfb3b7dff9696f4a3cca86bd557e0d21d7bca8bdb4e868d1ae93a2eb731392370ff7a2d83252648102099d8d5bd700ff49ae5cad
-";
+    const DEFAULT_REPORT_URL = "https://report.guesty.com/apps/reservations?apiKey=b85a2d1c4f355f5f041c70eadfb3b7dff9696f4a3cca86bd557e0d21d7bca8bdb4e868d1ae93a2eb731392370ff7a2d83252648102099d8d5bd700ff49ae5cad";
 
-    // =========================================================
-    // 2) CITY -> REPORT TAX TO MAP
-    // Change these codes if you want different labels
-    // =========================================================
     const CITY_REPORT_MAP = {
       "myrtle beach": "SC, MB, HC",
       "north myrtle beach": "SC, NMB, HC",
@@ -224,6 +217,12 @@
       el.textContent = message;
     }
 
+    function clearStatus(){
+      const el = document.getElementById("status");
+      el.className = "status";
+      el.textContent = "";
+    }
+
     function extractApiKeyFromUrl(url){
       return (url.split("apiKey=")[1] || "").split("&")[0];
     }
@@ -248,6 +247,17 @@
       return cur;
     }
 
+    function getTextField(obj, path){
+      const raw = getNestedValue(obj, path);
+      if(raw === undefined || raw === null) return "";
+      if(typeof raw === "string" || typeof raw === "number") return String(raw).trim();
+      if(typeof raw === "object"){
+        if(raw.value !== undefined && raw.value !== null) return String(raw.value).trim();
+        if(raw.children !== undefined && raw.children !== null && typeof raw.children !== "object") return String(raw.children).trim();
+      }
+      return "";
+    }
+
     function getMoneyField(obj, path){
       const raw = getNestedValue(obj, path);
       if(raw === undefined || raw === null || raw === "") return 0;
@@ -257,17 +267,6 @@
         if(raw.children !== undefined && raw.children !== null && typeof raw.children !== "object") return num(raw.children);
       }
       return 0;
-    }
-
-    function getTextField(obj, path){
-      const raw = getNestedValue(obj, path);
-      if(raw === undefined || raw === null) return "";
-      if(typeof raw === "string" || typeof raw === "number") return String(raw).trim();
-      if(typeof raw === "object"){
-        if(raw.children !== undefined && raw.children !== null && typeof raw.children !== "object") return String(raw.children).trim();
-        if(raw.value !== undefined && raw.value !== null) return String(raw.value).trim();
-      }
-      return "";
     }
 
     function mapGuestyReservation(r){
@@ -296,10 +295,8 @@
 
     function isVrboOrDirect(row){
       const source = (row.source || "").toLowerCase().trim();
-
       if(!source) return false;
       if(source.includes("airbnb")) return false;
-
       return (
         source.includes("vrbo") ||
         source.includes("direct") ||
@@ -313,6 +310,16 @@
       return CITY_REPORT_MAP[key] || "SC, HC";
     }
 
+    function normalizeRowsFromPayload(payload){
+      if(Array.isArray(payload)) return payload;
+      if(Array.isArray(payload.results)) return payload.results;
+      if(Array.isArray(payload.data)) return payload.data;
+      if(payload.data && Array.isArray(payload.data.results)) return payload.data.results;
+      if(payload.data && Array.isArray(payload.data.rows)) return payload.data.rows;
+      if(Array.isArray(payload.rows)) return payload.rows;
+      return [];
+    }
+
     async function fetchGuestyRows(reportUrl){
       const apiKey = extractApiKeyFromUrl(reportUrl);
       if(!apiKey) throw new Error("Missing apiKey in Guesty URL");
@@ -320,10 +327,10 @@
       const endpoint = "https://report.guesty.com/api/shared-reservations-reports?timezone=America/New_York&skip=0&limit=1000";
 
       const res = await fetch(endpoint, {
+        method: "GET",
         headers: {
           "accept": "*/*",
-          "authorization": apiKey,
-          "content-type": "application/json"
+          "authorization": apiKey
         }
       });
 
@@ -332,8 +339,29 @@
       }
 
       const payload = await res.json();
-      const rows = Array.isArray(payload) ? payload : (payload.results || payload.data || []);
+      const rows = normalizeRowsFromPayload(payload);
+
+      if(!Array.isArray(rows)){
+        throw new Error("Guesty response format not recognized");
+      }
+
       return rows.map(mapGuestyReservation);
+    }
+
+    function renderEmptyTable(message){
+      document.getElementById("tableWrap").innerHTML = `
+        <table>
+          <tr>
+            <th>Property Name</th>
+            <th>Report Tax To</th>
+            <th class="right">Amount To Report</th>
+            <th class="right">Total Tax</th>
+          </tr>
+          <tr>
+            <td colspan="4">${escapeHtml(message)}</td>
+          </tr>
+        </table>
+      `;
     }
 
     async function runReport(){
@@ -341,15 +369,15 @@
       document.getElementById("tableWrap").innerHTML = "";
       showStatus("Loading Guesty data...", "ok");
 
-      const reportUrl = document.getElementById("reportUrl").value.trim();
-      const month = parseInt(document.getElementById("month").value, 10);
-      const year = parseInt(document.getElementById("year").value, 10);
+      try {
+        const reportUrl = document.getElementById("reportUrl").value.trim();
+        const month = parseInt(document.getElementById("month").value, 10);
+        const year = parseInt(document.getElementById("year").value, 10);
 
-      if(!reportUrl) return showStatus("Paste the Guesty report URL first", "error");
-      if(!(month >= 1 && month <= 12)) return showStatus("Enter a valid month", "error");
-      if(!(year >= 2020 && year <= 2100)) return showStatus("Enter a valid year", "error");
+        if(!reportUrl) throw new Error("Paste the Guesty report URL first");
+        if(!(month >= 1 && month <= 12)) throw new Error("Enter a valid month");
+        if(!(year >= 2020 && year <= 2100)) throw new Error("Enter a valid year");
 
-      try{
         const rows = await fetchGuestyRows(reportUrl);
         const { from, to } = getDateRange(month, year);
 
@@ -394,42 +422,46 @@
 
         const keys = Object.keys(byProperty).sort((a,b) => a.localeCompare(b));
 
-        let html = "<table>";
-        html += "<tr><th>Property Name</th><th>Report Tax To</th><th class='right'>Amount To Report</th><th class='right'>Total Tax</th></tr>";
-
-        if(!keys.length){
-          html += "<tr><td colspan='4'>No VRBO / Direct / Website / Manual reservations with payout and taxes found for this period.</td></tr>";
-        } else {
-          keys.forEach(key => {
-            const item = byProperty[key];
-            html += "<tr>";
-            html += "<td>" + escapeHtml(item.property) + "</td>";
-            html += "<td>" + escapeHtml(item.reportTo) + "</td>";
-            html += "<td class='right'>" + money(item.amountToReport) + "</td>";
-            html += "<td class='right'>" + money(item.totalTax) + "</td>";
-            html += "</tr>";
-          });
-
-          html += "<tr>";
-          html += "<th>Total</th>";
-          html += "<th></th>";
-          html += "<th class='right'>" + money(totalAmount) + "</th>";
-          html += "<th class='right'>" + money(totalTax) + "</th>";
-          html += "</tr>";
-        }
-
-        html += "</table>";
-        document.getElementById("tableWrap").innerHTML = html;
-
         document.getElementById("cards").style.display = "";
         document.getElementById("sumProperties").textContent = keys.length;
         document.getElementById("sumReservations").textContent = totalReservations;
         document.getElementById("sumAmount").textContent = money(totalAmount);
         document.getElementById("sumTax").textContent = money(totalTax);
 
-        showStatus("Report loaded successfully", "ok");
+        if(!keys.length){
+          renderEmptyTable("No VRBO / Direct / Website / Manual reservations with payout and taxes found for this period.");
+          showStatus("Information loaded. 0 matching reservations found.", "ok");
+          return;
+        }
+
+        let html = "<table>";
+        html += "<tr><th>Property Name</th><th>Report Tax To</th><th class='right'>Amount To Report</th><th class='right'>Total Tax</th></tr>";
+
+        keys.forEach(key => {
+          const item = byProperty[key];
+          html += "<tr>";
+          html += "<td>" + escapeHtml(item.property) + "</td>";
+          html += "<td>" + escapeHtml(item.reportTo) + "</td>";
+          html += "<td class='right'>" + money(item.amountToReport) + "</td>";
+          html += "<td class='right'>" + money(item.totalTax) + "</td>";
+          html += "</tr>";
+        });
+
+        html += "<tr>";
+        html += "<th>Total</th>";
+        html += "<th></th>";
+        html += "<th class='right'>" + money(totalAmount) + "</th>";
+        html += "<th class='right'>" + money(totalTax) + "</th>";
+        html += "</tr>";
+        html += "</table>";
+
+        document.getElementById("tableWrap").innerHTML = html;
+        showStatus("Information loaded successfully.", "ok");
+
       } catch(err){
+        renderEmptyTable("Could not load data.");
         showStatus(err.message || "Failed loading report", "error");
+        console.error(err);
       }
     }
 
@@ -438,6 +470,10 @@
     document.getElementById("month").value = now.getMonth() + 1;
     document.getElementById("year").value = now.getFullYear();
     document.getElementById("runBtn").addEventListener("click", runReport);
+
+    window.addEventListener("load", () => {
+      runReport();
+    });
   </script>
 </body>
 </html>
