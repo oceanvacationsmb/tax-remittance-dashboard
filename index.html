@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Guesty Live Fetch Debug</title>
+  <title>Guesty LIVE Fetch Debug</title>
   <style>
     body { font-family: Arial, sans-serif; background: #fff; padding: 2rem; }
     table { border-collapse: collapse; width: 100%; background: #fafcff; }
@@ -20,7 +20,7 @@
   <textarea id="raw" readonly></textarea>
   <div id="table"></div>
   <script>
-    const url = "https://report.guesty.com/apps/reservations?apiKey=7f3238d31268cf54dfca061c8bf8675d948c08b2b4d2647cc1f4edc3d58af436e4c97a3ee106b6c7908c5339dbc1a65ac5cbe943751b666e63ed8d1e9f04326c";
+    const url = "https://report.guesty.com/apps/reservations?apiKey=b85a2d1c4f355f5f041c70eadfb3b7dff9696f4a3cca86bd557e0d21d7bca8bdb4e868d1ae93a2eb731392370ff7a2d83252648102099d8d5bd700ff49ae5cad";
     const info = document.getElementById('info');
     const tableDiv = document.getElementById('table');
     const raw = document.getElementById('raw');
@@ -50,7 +50,7 @@
           tableDiv.innerHTML = html;
         } catch (jsonErr) {
           info.innerHTML = `<span class="error">ERROR: Got a response that is not JSON.<br>You may see "Unexpected token &lt;" if Guesty is sending HTML instead of reservations data.<br>
-          See raw response below. <br> Browser console will show more details.</span>`;
+          See raw response below.<br>Browser console will show more details.</span>`;
           console.error('JSON parse error:', jsonErr);
         }
       } catch (err) {
