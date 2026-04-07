@@ -6,12 +6,14 @@
   <title>Report Taxes</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: Arial, sans-serif;
       background: #f4f6f8;
       color: #16313a;
       padding: 24px;
     }
+
     .wrap {
       max-width: 1500px;
       margin: 0 auto;
@@ -21,12 +23,14 @@
       padding: 24px;
       box-shadow: 0 8px 24px rgba(0,0,0,.06);
     }
+
     h1 {
       text-align: center;
       font-size: 34px;
       margin-bottom: 18px;
       letter-spacing: .5px;
     }
+
     .toolbar {
       display: grid;
       grid-template-columns: 180px 180px 220px;
@@ -35,6 +39,7 @@
       justify-content: center;
       margin-bottom: 20px;
     }
+
     label {
       display: block;
       font-size: 12px;
@@ -43,6 +48,7 @@
       margin-bottom: 6px;
       text-transform: uppercase;
     }
+
     select, button {
       width: 100%;
       padding: 11px 12px;
@@ -51,6 +57,7 @@
       font-size: 14px;
       background: #fff;
     }
+
     button {
       border: none;
       background: #0d5c4b;
@@ -58,7 +65,11 @@
       font-weight: bold;
       cursor: pointer;
     }
-    button:hover { background: #0b4e40; }
+
+    button:hover {
+      background: #0b4e40;
+    }
+
     .status {
       display: none;
       margin-bottom: 16px;
@@ -67,29 +78,35 @@
       font-size: 14px;
       white-space: pre-wrap;
     }
+
     .status.show { display: block; }
+
     .status.ok {
       background: #e9f7ee;
       border: 1px solid #badfc5;
       color: #1a6b39;
     }
+
     .status.error {
       background: #fde9e9;
       border: 1px solid #eebaba;
       color: #a12222;
     }
+
     .cards {
       display: grid;
       grid-template-columns: repeat(4, minmax(180px, 1fr));
       gap: 12px;
       margin-bottom: 22px;
     }
+
     .card {
       border: 1px solid #d8e2e7;
       border-radius: 10px;
       background: #fbfdfe;
       padding: 16px;
     }
+
     .card-label {
       font-size: 11px;
       font-weight: bold;
@@ -97,33 +114,45 @@
       text-transform: uppercase;
       margin-bottom: 8px;
     }
+
     .card-value {
       font-size: 24px;
       font-weight: bold;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
     }
+
     th, td {
       border: 1px solid #d8e2e7;
       padding: 10px 12px;
       text-align: left;
       font-size: 14px;
     }
+
     th {
       background: #eef4f7;
       text-transform: uppercase;
       font-size: 12px;
     }
-    td.right, th.right { text-align: right; }
-    tr:nth-child(even) { background: #fafcfd; }
+
+    td.right, th.right {
+      text-align: right;
+    }
+
+    tr:nth-child(even) {
+      background: #fafcfd;
+    }
+
     .note {
       margin-top: 14px;
       font-size: 12px;
       color: #61767f;
     }
+
     .debug {
       margin-top: 14px;
       padding: 12px;
@@ -132,8 +161,9 @@
       border-radius: 8px;
       font-size: 12px;
       color: #425962;
-      line-height: 1.5;
+      line-height: 1.6;
     }
+
     @media (max-width: 980px) {
       .toolbar { grid-template-columns: 1fr; }
       .cards { grid-template-columns: 1fr 1fr; }
@@ -183,7 +213,7 @@
     <div id="debugWrap"></div>
 
     <div class="note">
-      This version paginates Guesty results and parses city from address when city is blank.
+      This version paginates Guesty results, parses city from address when city is blank, and does not drop rows only because source is empty.
     </div>
   </div>
 
@@ -258,8 +288,13 @@
     function guestyText(obj, path) {
       const direct = obj ? obj[path] : undefined;
       const raw = (direct !== undefined && direct !== null) ? direct : getNestedValue(obj, path);
+
       if (raw === undefined || raw === null) return "";
-      if (typeof raw === "string" || typeof raw === "number") return String(raw).trim();
+
+      if (typeof raw === "string" || typeof raw === "number") {
+        return String(raw).trim();
+      }
+
       if (typeof raw === "object") {
         if (raw.children !== undefined && raw.children !== null) {
           if (typeof raw.children === "string" || typeof raw.children === "number") {
@@ -270,6 +305,7 @@
           return String(raw.value).trim();
         }
       }
+
       return "";
     }
 
@@ -284,14 +320,17 @@
         getNestedValue(r, "money.invoiceItems.children") ||
         getNestedValue(r, "invoiceItems.children") ||
         [];
+
       if (Array.isArray(directArray)) return directArray;
       if (Array.isArray(r["money.invoiceItems"])) return r["money.invoiceItems"];
       if (Array.isArray(r.invoiceItems)) return r.invoiceItems;
+
       return [];
     }
 
     function getInvoiceItemsTaxTotal(r) {
       const items = getInvoiceItemsArray(r);
+
       return items.reduce((sum, item) => {
         const title = ((item && item.title) || "").toString().toLowerCase();
         const name = ((item && item.name) || "").toString().toLowerCase();
@@ -325,6 +364,38 @@
       return "";
     }
 
+    function guessSourceFromRow(r, propertyAddress, nickname) {
+      const rawBlob = JSON.stringify(r).toLowerCase();
+
+      const explicit =
+        guestyText(r, "source") ||
+        guestyText(r, "channel") ||
+        guestyText(r, "integration.nickname") ||
+        guestyText(r, "integration.nickname.children") ||
+        guestyText(r, "integration.name") ||
+        guestyText(r, "platform") ||
+        guestyText(r, "reservationSource") ||
+        guestyText(r, "reservation.source") ||
+        guestyText(r, "quote.channel") ||
+        guestyText(r, "quote.source") ||
+        "";
+
+      if (explicit) return explicit;
+
+      if (rawBlob.includes("airbnb")) return "airbnb";
+      if (rawBlob.includes("vrbo")) return "vrbo";
+      if (rawBlob.includes("homeaway")) return "homeaway";
+      if (rawBlob.includes("manual")) return "manual";
+      if (rawBlob.includes("website")) return "website";
+      if (rawBlob.includes("direct")) return "direct";
+
+      const hint = ((propertyAddress || "") + " " + (nickname || "")).toLowerCase();
+      if (hint.includes("vrbo")) return "vrbo";
+      if (hint.includes("direct")) return "direct";
+
+      return "";
+    }
+
     function mapGuestyReservation(r) {
       const propertyAddress =
         guestyText(r, "listing.address.full") ||
@@ -332,6 +403,12 @@
         guestyText(r, "customFields.68e44b138e7b460011d90661") ||
         guestyText(r, "customFields.68e44b138e7b460011d90661.value") ||
         guestyText(r, "customFields.68e44b138e7b460011d90661.children") ||
+        "";
+
+      const nickname =
+        (r["listing.nickname"] && r["listing.nickname"].children) ||
+        guestyText(r, "listing.nickname.children") ||
+        guestyText(r, "listing.nickname") ||
         "";
 
       const cityTax = Math.max(
@@ -358,17 +435,14 @@
         guestyText(r, "listing.address.city") ||
         parseCityFromAddress(propertyAddress);
 
-      const source =
-        guestyText(r, "source") ||
-        guestyText(r, "integration.nickname") ||
-        guestyText(r, "platform");
-
       const totalPayout = Math.max(
         guestyValue(r, "money.hostPayout"),
         guestyValue(r, "money.hostPayoutUsd"),
         guestyValue(r, "totalPayout"),
         guestyValue(r, "money.totalPayout")
       );
+
+      const source = guessSourceFromRow(r, propertyAddress, nickname);
 
       return {
         "CHECK-IN DATE":
@@ -377,12 +451,7 @@
           guestyText(r, "checkIn") ||
           "",
 
-        "LISTING'S NICKNAME":
-          (r["listing.nickname"] && r["listing.nickname"].children) ||
-          guestyText(r, "listing.nickname.children") ||
-          guestyText(r, "listing.nickname") ||
-          "",
-
+        "LISTING'S NICKNAME": nickname,
         "PROPERTY ADDRESS": propertyAddress,
         "CITY": city,
         "SOURCE": source,
@@ -456,7 +525,6 @@
 
         if (rows.length < limit) break;
         skip += limit;
-
         if (page > 50) break;
       }
 
@@ -466,6 +534,7 @@
     function getDateRange(month, year) {
       const mm = String(month).padStart(2, "0");
       const last = new Date(year, month, 0).getDate();
+
       return {
         from: `${year}-${mm}-01`,
         to: `${year}-${mm}-${String(last).padStart(2, "0")}`
@@ -493,17 +562,43 @@
         ((r["LISTING'S NICKNAME"] || "").trim() || (r["PROPERTY ADDRESS"] || "").trim() || "Unknown")
       ))].sort();
 
-      const uniqueSources = [...new Set(rows.map(r => ((r["SOURCE"] || "") + "").trim()).filter(Boolean))].sort();
+      const uniqueSources = [...new Set(
+        rows.map(r => ((r["SOURCE"] || "") + "").trim()).filter(Boolean)
+      )].sort();
+
+      const taxableRows = rows.filter(r => num(r["TOTAL PAYOUT"]) > 0 && getRowTaxTotal(r) > 0);
 
       document.getElementById("debugWrap").innerHTML = `
         <div class="debug">
           <div><strong>Total fetched rows:</strong> ${rows.length}</div>
           <div><strong>Filtered rows:</strong> ${filtered.length}</div>
+          <div><strong>Rows with payout and tax before source check:</strong> ${taxableRows.length}</div>
           <div><strong>Unique properties fetched:</strong> ${uniqueProps.length}</div>
           <div><strong>Property sample:</strong> ${escapeHtml(uniqueProps.slice(0, 20).join(" | "))}</div>
-          <div><strong>Sources found:</strong> ${escapeHtml(uniqueSources.join(" | "))}</div>
+          <div><strong>Sources found:</strong> ${escapeHtml(uniqueSources.join(" | ") || "NONE FOUND")}</div>
         </div>
       `;
+    }
+
+    function rowLooksReportable(row) {
+      const payout = num(row["TOTAL PAYOUT"]);
+      const tax = getRowTaxTotal(row);
+      const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
+
+      if (payout <= 0) return false;
+      if (tax <= 0) return false;
+
+      if (!source) return true;
+      if (source.includes("airbnb")) return false;
+
+      const keepSource =
+        source.includes("vrbo") ||
+        source.includes("homeaway") ||
+        source.includes("direct") ||
+        source.includes("website") ||
+        source.includes("manual");
+
+      return keepSource;
     }
 
     async function runReport() {
@@ -518,30 +613,23 @@
         const rows = await fetchGuestyRowsPaged();
         const { from, to } = getDateRange(month, year);
 
+        console.log("RAW MAPPED ROWS", rows.slice(0, 20));
+        console.log("SOURCE CHECK SAMPLE", rows.slice(0, 20).map(r => ({
+          property: r["LISTING'S NICKNAME"],
+          checkIn: r["CHECK-IN DATE"],
+          source: r["SOURCE"],
+          payout: r["TOTAL PAYOUT"],
+          tax: r["TAXES"]
+        })));
+
         const filtered = rows.filter(row => {
           const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
-          const payout = num(row["TOTAL PAYOUT"]);
-          const tax = getRowTaxTotal(row);
-          const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
-
           if (!checkIn) return false;
           if (checkIn < from || checkIn > to) return false;
-          if (!source) return false;
-          if (source.includes("airbnb")) return false;
-
-          const keepSource =
-            source.includes("vrbo") ||
-            source.includes("direct") ||
-            source.includes("website") ||
-            source.includes("manual");
-
-          if (!keepSource) return false;
-          if (payout <= 0) return false;
-          if (tax <= 0) return false;
-
-          return true;
+          return rowLooksReportable(row);
         });
 
+        console.log("FILTERED ROWS", filtered.slice(0, 50));
         renderDebug(rows, filtered);
 
         const byProperty = {};
@@ -586,7 +674,7 @@
         document.getElementById("sumTax").textContent = money(totalTax);
 
         if (!keys.length) {
-          renderEmptyTable("No matching taxed VRBO / Direct / Website / Manual reservations found for this month.");
+          renderEmptyTable("No matching taxed reservations found for this month.");
           showStatus("Information loaded. 0 matching reservations found.", "ok");
           return;
         }
@@ -626,8 +714,10 @@
         "January", "February", "March", "April", "May", "June",
         "July", "August", "September", "October", "November", "December"
       ];
+
       const sel = document.getElementById("monthSelect");
       sel.innerHTML = "";
+
       months.forEach((name, index) => {
         const option = document.createElement("option");
         option.value = index + 1;
@@ -639,6 +729,7 @@
     function populateYearDropdown() {
       const sel = document.getElementById("yearSelect");
       sel.innerHTML = "";
+
       const currentYear = new Date().getFullYear();
       for (let y = currentYear + 1; y >= 2023; y--) {
         const option = document.createElement("option");
