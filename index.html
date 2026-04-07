@@ -1,0 +1,114 @@
+// 1. Install dependencies: npm install express node-fetch body-parser cors
+const express = require('express');
+const fetch = require('node-fetch'); // v2 required: npm install node-fetch@2
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const app = express();
+const PORT = 4000;
+
+// ====== SETTINGS ======
+let GUESTY_REPORT_URL = 'YOUR_DEFAULT_GUESTY_REPORT_LINK_HERE'; // CHANGE after first login if needed
+
+app.use(cors());
+app.use(bodyParser.json());
+
+// -- UPDATE LINK endpoint --
+app.post('/api/updateReportLink', (req, res) => {
+  const { url } = req.body;
+  if (typeof url !== 'string' || !url.startsWith('https://')) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+  GUESTY_REPORT_URL = url;
+  res.json({ success: true });
+});
+
+// -- Main REPORT endpoint --
+app.get('/api/report', async (req, res) => {
+  try {
+    // --- Handle month/year filters ---
+    let year = parseInt(req.query.year, 10) || (new Date()).getFullYear();
+    let month = parseInt(req.query.month, 10) || (new Date()).getMonth() + 1; // JS 0-based months
+    // always 2-digit month
+    const monthStr = month.toString().padStart(2, '0');
+
+    // --- Fetch Guesty Data (ONE YEAR) ---
+    const reportUrl = `${GUESTY_REPORT_URL}&perPage=1000`;
+    const resp = await fetch(reportUrl);
+    if (!resp.ok) throw new Error('Guesty fetch failed: ' + resp.status);
+    const data = await resp.json();
+
+    // --- Extract Data Rows ---
+    let rows = data.reservations || data.results || []; // adapt if different
+
+    // --- Filter for month/year ---
+    rows = rows.filter(r => {
+      const date = r.createdAt || r.checkIn || r.check_in;
+      if (!date) return false;
+      const d = new Date(date);
+      return d.getFullYear() === year && (d.getMonth() + 1) === month;
+    });
+
+    // --- Filter rows: SOURCE + TAX COLLECTED ---
+    rows = rows.filter(r => {
+      const source = (r.source || '').toLowerCase();
+      const hasTax = (
+        (Number(r.money?.invoiceItems?.CITY_TAX || 0) > 0) ||
+        (Number(r.money?.invoiceItems?.STATE_TAX || 0) > 0) ||
+        (Number(r.taxCounty || 0) > 0) ||
+        (Number(r.taxOccupancy || 0) > 0)
+      );
+      return hasTax && (
+        source === 'vrbo' ||
+        source === 'website' ||
+        source === 'manual' ||
+        source === 'direct'
+      );
+    });
+
+    // --- Mapping LOGIC ---
+    const CITY_TO_COUNTY = {
+      "myrtle beach":   { municipality: "Myrtle Beach", county: "Horry County" },
+      "surfside beach": { municipality: "Surfside Beach", county: "Horry County" },
+      "north myrtle beach": { municipality: "North Myrtle Beach", county: "Horry County" },
+      "murrells inlet": { municipality: "Murrells Inlet", county: "Georgetown County" }
+      // Add more as needed
+    };
+
+    // --- Format for frontend ---
+    const results = rows.map(r => {
+      const addr = r.listing?.address || {};
+      const cityRaw = addr.city || '';
+      const cityKey = cityRaw.toLowerCase().replace(/[^a-z ]+/gi,'').trim();
+      const mapping = CITY_TO_COUNTY[cityKey] || { municipality: cityRaw, county: '' };
+      const payout = Number(r.money?.hostPayout || 0);
+      const cityTax = Number(r.money?.invoiceItems?.CITY_TAX || 0);
+      const stateTax = Number(r.money?.invoiceItems?.STATE_TAX || 0);
+      const countyTax = Number(r.taxCounty || r.taxOccupancy || 0);
+      const totalCollected = cityTax + stateTax + countyTax;
+
+      return {
+        address: addr.full || '',
+        grossPayout: payout,
+        state: addr.state || 'SC',
+        city: addr.city || '',
+        county: mapping.county,
+        municipality: mapping.municipality,
+        totalCollected,
+        totalToPay: payout - totalCollected,
+        cityTax,
+        stateTax,
+        countyTax,
+        source: r.source || '',
+        checkIn: r.checkIn || r.check_in || '', // Useful for debugging
+      };
+    });
+
+    res.json({ data: results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Backend running on http://localhost:${PORT}`);
+});
