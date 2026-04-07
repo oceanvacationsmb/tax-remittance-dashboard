@@ -1,95 +1,100 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <title>Guesty Tax Report</title>
+  <meta charset="UTF-8">
+  <title>Guesty Dashboard (Live Fetch)</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #fafcff; margin: 0; padding: 20px; }
+    h2 { color: #224; }
+    #report { margin-top: 30px; }
+    table { border-collapse: collapse; width: 100%; background: #fff; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 6px 10px; font-size: 13px;}
+    th { background: #336699; color: #fff; }
+    tr:nth-child(even) { background: #f4faff }
+    .summary { background: #e6f7e6; font-weight: bold;}
+    .error { color: #b11; font-weight: bold; }
+  </style>
 </head>
 <body>
-  <h2>Guesty Tax & Payout Report</h2>
-  <label>
-    Paste your Guesty report link here:
-    <input type="text" id="reportUrl" size="80" value="https://report.guesty.com/apps/reservations?apiKey=7f3238d31268cf54dfca061c8bf8675d948c08b2b4d2647cc1f4edc3d58af436e4c97a3ee106b6c7908c5339dbc1a65ac5cbe943751b666e63ed8d1e9f04326c">
-  </label>
-  <button onclick="fetchReport()">Load Report</button>
-
-  <div id="result"></div>
-
+  <h2>Guesty Tax & Payout Dashboard</h2>
+  <div id="report"><em>Loading report...</em></div>
   <script>
-    async function fetchReport() {
-      const url = document.getElementById('reportUrl').value;
-      const result = document.getElementById('result');
-      result.textContent = "Loading...";
+    // ==== EDIT your Guesty public shared link here ====
+    const guestyUrl = "https://report.guesty.com/apps/reservations?apiKey=7f3238d31268cf54dfca061c8bf8675d948c08b2b4d2647cc1f4edc3d58af436e4c97a3ee106b6c7908c5339dbc1a65ac5cbe943751b666e63ed8d1e9f04326c";
+    // ==================================================
+
+    const div = document.getElementById('report');
+    fetchGuesty();
+
+    async function fetchGuesty() {
+      div.innerHTML = "<em>Loading your report...</em>";
       try {
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error("Could not fetch Guesty report");
-        const data = await resp.json();
-        if (!data.reservations && !data.results) {
-          result.textContent = "No data found in report.";
-          return;
+        const resp = await fetch(guestyUrl);
+        if (!resp.ok) throw new Error("Failed to fetch Guesty report, HTTP " + resp.status);
+        let data, text = await resp.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error("Got HTML instead of data. Guesty blocks direct public fetch in some cases.<br>If you see 'Unexpected token <' or 'CORS' in the browser console, it means this approach will not work on GitHub Pages.");
         }
+
         const rows = data.reservations || data.results || [];
-        // Filter logic: tax collected, VRBO/website/manual
-        const filtered = rows.filter(r => {
-          const source = (r.source || "").toLowerCase();
-          const tax =
-            Number(r.money?.invoiceItems?.CITY_TAX || 0) > 0 ||
-            Number(r.money?.invoiceItems?.STATE_TAX || 0) > 0 ||
-            Number(r.taxCounty || 0) > 0 ||
-            Number(r.taxOccupancy || 0) > 0;
-          return tax && (["vrbo", "website", "manual", "direct"].includes(source));
-        });
-        // Mapping logic for county/municipality
-        function getCounty(city) {
-          city = city.toLowerCase();
-          if (city === 'myrtle beach' || city === 'surfside beach' || city === 'north myrtle beach') return "Horry County";
-          if (city === 'murrells inlet') return "Georgetown County";
-          return "";
-        }
-        function getMunicipality(city) {
-          if (!city) return '';
-          return city;
-        }
-        let html = `<table border="1" cellpadding="3" style="border-collapse:collapse;">
-          <tr>
-            <th>PROPERTY ADDRESS</th>
-            <th>GROSS PAYOUT</th>
-            <th>NAME OF STATE</th>
-            <th>NAME OF CITY</th>
-            <th>NAME OF COUNTY</th>
-            <th>MUNICIPALITY</th>
-            <th>CITY TAX</th>
-            <th>STATE TAX</th>
-            <th>COUNTY TAX</th>
-            <th>TOTAL COLLECTED</th>
-            <th>TOTAL TO PAY</th>
-            <th>SOURCE</th>
-          </tr>`;
-        filtered.forEach(r => {
-          const addr = r.listing?.address || {};
+        if (!rows.length) throw new Error("No reservation data found!");
+
+        // Table headers
+        let html = `<table><tr>
+          <th>ADDRESS</th>
+          <th>CITY</th>
+          <th>STATE</th>
+          <th>GROSS PAYOUT</th>
+          <th>CITY TAX</th>
+          <th>STATE TAX</th>
+          <th>COUNTY TAX</th>
+          <th>TOTAL TAX</th>
+          <th>SOURCE</th>
+        </tr>`;
+
+        let totalGross = 0, totalCityTax = 0, totalStateTax = 0, totalCountyTax = 0;
+        for (const r of rows) {
+          const addr = r.listing?.address?.full || "-";
+          const city = r.listing?.address?.city || "-";
+          const state = r.listing?.address?.state || "-";
           const payout = Number(r.money?.hostPayout || 0);
-          const cityTax = Number(r.money?.invoiceItems?.CITY_TAX || 0);
+          const cityTax  = Number(r.money?.invoiceItems?.CITY_TAX || 0);
           const stateTax = Number(r.money?.invoiceItems?.STATE_TAX || 0);
           const countyTax = Number(r.taxCounty || r.taxOccupancy || 0);
-          const totalCollected = cityTax + stateTax + countyTax;
+          const totalTax = cityTax + stateTax + countyTax;
+          totalGross += payout;
+          totalCityTax += cityTax;
+          totalStateTax += stateTax;
+          totalCountyTax += countyTax;
+
           html += `<tr>
-            <td>${addr.full || ""}</td>
-            <td>${payout.toFixed(2)}</td>
-            <td>${addr.state || "SC"}</td>
-            <td>${addr.city || ""}</td>
-            <td>${getCounty(addr.city || "")}</td>
-            <td>${getMunicipality(addr.city || "")}</td>
-            <td>${cityTax.toFixed(2)}</td>
-            <td>${stateTax.toFixed(2)}</td>
-            <td>${countyTax.toFixed(2)}</td>
-            <td>${totalCollected.toFixed(2)}</td>
-            <td>${(payout - totalCollected).toFixed(2)}</td>
-            <td>${r.source || ""}</td>
+            <td>${addr}</td>
+            <td>${city}</td>
+            <td>${state}</td>
+            <td>$${payout.toFixed(2)}</td>
+            <td>$${cityTax.toFixed(2)}</td>
+            <td>$${stateTax.toFixed(2)}</td>
+            <td>$${countyTax.toFixed(2)}</td>
+            <td>$${totalTax.toFixed(2)}</td>
+            <td>${r.source || '-'}</td>
           </tr>`;
-        });
-        html += "</table>";
-        result.innerHTML = html;
+        }
+
+        html += `<tr class="summary">
+          <th colspan="3">TOTALS</th>
+          <th>$${totalGross.toFixed(2)}</th>
+          <th>$${totalCityTax.toFixed(2)}</th>
+          <th>$${totalStateTax.toFixed(2)}</th>
+          <th>$${totalCountyTax.toFixed(2)}</th>
+          <th>$${(totalCityTax + totalStateTax + totalCountyTax).toFixed(2)}</th>
+          <th></th>
+        </tr></table>`;
+
+        div.innerHTML = html;
       } catch (e) {
-        result.textContent = "Error: " + e.message;
+        div.innerHTML = `<div class="error">${e.message}</div>`;
       }
     }
   </script>
