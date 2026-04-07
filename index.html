@@ -227,16 +227,24 @@
   <script>
     const REPORT_URL = "https://report.guesty.com/apps/reservations?apiKey=b85a2d1c4f355f5f041c70eadfb3b7dff9696f4a3cca86bd557e0d21d7bca8bdb4e868d1ae93a2eb731392370ff7a2d83252648102099d8d5bd700ff49ae5cad";
 
-    const CITY_REPORT_MAP = {
-      "myrtle beach": "SC, MB, HC",
-      "north myrtle beach": "SC, NMB, HC",
-      "surfside beach": "SC, SSB, HC",
-      "garden city": "SC, GTC",
-      "georgetown": "SC, GTC",
-      "pawleys island": "SC, GTC",
-      "litchfield": "SC, GTC",
-      "murrells inlet": "SC, GTC",
-      "conway": "SC, HC"
+    const ALL_PROPERTIES = {
+      "MB - 7500": "SC, MB, HORRY",
+      "MB - 4765": "SC, MB, HORRY",
+      "MB - 469C": "SC, HORRY",
+      "MB - 4679/204": "SC, MB, HORRY",
+      "MB - 4631/301": "SC, MB, HORRY",
+      "MB - 2131": "SC, MB, HORRY",
+      "MB - 209/5113": "SC, MB, HORRY",
+      "MB - 2000": "SC, MB, HORRY",
+      "MB - 1552": "SC, MB, HORRY",
+      "GCSSB - 204-2D": "SC, HORRY",
+      "GCSSB - 113B-13N": "SC, SSB, HORRY",
+      "GC - 1463": "SC, GTC",
+      "GCSSB - 113B-15S": "SC, SSB, HORRY",
+      "GCSSB - 115C 15N": "SC, SSB, HORRY",
+      "NMB - 214-2S": "SC, NMB, HORRY",
+      "NMB - 508/1-33S": "SC, NMB, HORRY",
+      "NMB - 508/2-33S": "SC, NMB, HORRY"
     };
 
     function num(v) {
@@ -363,20 +371,6 @@
       }, 0);
     }
 
-    function parseCityFromAddress(address) {
-      const a = (address || "").toLowerCase();
-      if (a.includes("north myrtle beach")) return "North Myrtle Beach";
-      if (a.includes("myrtle beach")) return "Myrtle Beach";
-      if (a.includes("surfside beach")) return "Surfside Beach";
-      if (a.includes("garden city")) return "Garden City";
-      if (a.includes("georgetown")) return "Georgetown";
-      if (a.includes("pawleys island")) return "Pawleys Island";
-      if (a.includes("litchfield")) return "Litchfield";
-      if (a.includes("murrells inlet")) return "Murrells Inlet";
-      if (a.includes("conway")) return "Conway";
-      return "";
-    }
-
     function guessSourceFromRow(r, propertyAddress, nickname) {
       const rawBlob = JSON.stringify(r).toLowerCase();
 
@@ -444,10 +438,6 @@
         guestyValue(r, "money.invoiceItems.OCCUPANCY_TAX")
       );
 
-      const city =
-        guestyText(r, "listing.address.city") ||
-        parseCityFromAddress(propertyAddress);
-
       const totalPayout = Math.max(
         guestyValue(r, "money.hostPayout"),
         guestyValue(r, "money.hostPayoutUsd"),
@@ -466,7 +456,6 @@
 
         "LISTING'S NICKNAME": nickname,
         "PROPERTY ADDRESS": propertyAddress,
-        "CITY": city,
         "SOURCE": source,
         "TOTAL PAYOUT": totalPayout,
 
@@ -488,14 +477,6 @@
         num(row["TAXES"]),
         num(row["CITY TAX"]) + num(row["STATE TAX"]) + num(row["COUNTY TAX"]) + num(row["OCCUPANCY TAX"])
       );
-    }
-
-    function getReportTaxTo(city, propertyName) {
-      const property = (propertyName || "").toUpperCase().trim();
-      if (property.startsWith("GC -")) return "SC, GTC";
-
-      const key = (city || "").toLowerCase().trim();
-      return CITY_REPORT_MAP[key] || "SC, HC";
     }
 
     function normalizeRowsFromPayload(payload) {
@@ -590,6 +571,16 @@
         });
 
         const byProperty = {};
+
+        Object.keys(ALL_PROPERTIES).forEach(propertyName => {
+          byProperty[propertyName] = {
+            property: propertyName,
+            reportTo: ALL_PROPERTIES[propertyName],
+            amountToReport: 0,
+            totalTax: 0
+          };
+        });
+
         let totalReservations = 0;
         let totalAmount = 0;
         let totalTax = 0;
@@ -600,7 +591,6 @@
             (row["PROPERTY ADDRESS"] || "").toString().trim() ||
             "Unknown";
 
-          const city = (row["CITY"] || "").toString().trim();
           const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
           const payout = num(row["TOTAL PAYOUT"]);
           const tax = getRowTaxTotal(row);
@@ -608,7 +598,7 @@
           if (!byProperty[propertyName]) {
             byProperty[propertyName] = {
               property: propertyName,
-              reportTo: getReportTaxTo(city, propertyName),
+              reportTo: "SC, HORRY",
               amountToReport: 0,
               totalTax: 0
             };
