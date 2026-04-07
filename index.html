@@ -225,7 +225,7 @@
   </div>
 
   <script>
-    const REPORT_URL = "https://report.guesty.com/apps/reservations?apiKey=4abec5f14e3f0a632d718e3c5cf39634ce7a16df3dd6f13e48680266808ccae4f6d83abf6571ab17ee27809b0b0a160fc0c0b7fb2a4480ba4fb0ab1062a2375a";
+    const REPORT_URL = "https://report.guesty.com/apps/reservations?apiKey=b85a2d1c4f355f5f041c70eadfb3b7dff9696f4a3cca86bd557e0d21d7bca8bdb4e868d1ae93a2eb731392370ff7a2d83252648102099d8d5bd700ff49ae5cad";
 
     const CITY_REPORT_MAP = {
       "myrtle beach": "SC, MB, HC",
@@ -595,112 +595,47 @@
     }
 
     async function runReport() {
-  document.getElementById("cards").style.display = "none";
-  document.getElementById("tableWrap").innerHTML = "";
-  showStatus("Loading Guesty data...", "ok");
+      document.getElementById("cards").style.display = "none";
+      document.getElementById("tableWrap").innerHTML = "";
+      showStatus("Loading Guesty data...", "ok");
 
-  try {
-    const month = parseInt(document.getElementById("monthSelect").value, 10);
-    const year = parseInt(document.getElementById("yearSelect").value, 10);
-    const rows = await fetchGuestyRowsPaged();
-    const { from, to } = getDateRange(month, year);
+      try {
+        const month = parseInt(document.getElementById("monthSelect").value, 10);
+        const year = parseInt(document.getElementById("yearSelect").value, 10);
+        const rows = await fetchGuestyRowsPaged();
+        const { from, to } = getDateRange(month, year);
 
-    const monthRows = rows.filter(row => {
-      const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
-      return checkIn && checkIn >= from && checkIn <= to;
-    });
+        const filtered = rows.filter(row => {
+          const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
+          if (!checkIn) return false;
+          if (checkIn < from || checkIn > to) return false;
+          return rowLooksReportable(row);
+        });
 
-    const byProperty = {};
-    let totalReservations = 0;
-    let totalAmount = 0;
-    let totalTax = 0;
+        const byProperty = {};
+        let totalReservations = 0;
+        let totalAmount = 0;
+        let totalTax = 0;
 
-    monthRows.forEach(row => {
-      const propertyName =
-        (row["LISTING'S NICKNAME"] || "").toString().trim() ||
-        (row["PROPERTY ADDRESS"] || "").toString().trim() ||
-        "Unknown";
+        filtered.forEach(row => {
+          const propertyName =
+            (row["LISTING'S NICKNAME"] || "").toString().trim() ||
+            (row["PROPERTY ADDRESS"] || "").toString().trim() ||
+            "Unknown";
 
-      const city = (row["CITY"] || "").toString().trim();
-      const source = ((row["SOURCE"] || "") + "").toLowerCase().trim();
-      const payout = num(row["TOTAL PAYOUT"]);
-      const tax = getRowTaxTotal(row);
+          const city = (row["CITY"] || "").toString().trim();
+          const payout = num(row["TOTAL PAYOUT"]);
+          const tax = getRowTaxTotal(row);
+          const amountToReport = Math.max(0, payout - tax);
 
-      if (!byProperty[propertyName]) {
-        byProperty[propertyName] = {
-          property: propertyName,
-          reportTo: getReportTaxTo(city, propertyName),
-          amountToReport: 0,
-          totalTax: 0
-        };
-      }
-
-      totalReservations++;
-
-      const isAirbnb = source.includes("airbnb");
-      const isAllowedSource =
-        !isAirbnb && (
-          !source ||
-          source.includes("vrbo") ||
-          source.includes("homeaway") ||
-          source.includes("direct") ||
-          source.includes("website") ||
-          source.includes("manual")
-        );
-
-      if (isAllowedSource && tax > 0) {
-        const amountToReport = Math.max(0, payout - tax);
-        byProperty[propertyName].amountToReport += amountToReport;
-        byProperty[propertyName].totalTax += tax;
-
-        totalAmount += amountToReport;
-        totalTax += tax;
-      }
-    });
-
-    const keys = Object.keys(byProperty).sort((a, b) => a.localeCompare(b));
-
-    document.getElementById("cards").style.display = "";
-    document.getElementById("sumProperties").textContent = keys.length;
-    document.getElementById("sumReservations").textContent = totalReservations;
-    document.getElementById("sumAmount").textContent = money(totalAmount);
-    document.getElementById("sumTax").textContent = money(totalTax);
-
-    if (!keys.length) {
-      renderEmptyTable("No reservations found for this month.");
-      showStatus("Information loaded. 0 reservations found.", "ok");
-      return;
-    }
-
-    let html = "<table>";
-    html += "<tr><th>Property Name</th><th>Report Tax To</th><th class='right'>Amount To Report</th><th class='right'>Total Tax</th></tr>";
-
-    keys.forEach(key => {
-      const item = byProperty[key];
-      html += "<tr>";
-      html += "<td>" + escapeHtml(item.property) + "</td>";
-      html += "<td>" + escapeHtml(item.reportTo) + "</td>";
-      html += "<td class='right'>" + money(item.amountToReport) + "</td>";
-      html += "<td class='right'>" + money(item.totalTax) + "</td>";
-      html += "</tr>";
-    });
-
-    html += "<tr>";
-    html += "<th>Total</th>";
-    html += "<th></th>";
-    html += "<th class='right'>" + money(totalAmount) + "</th>";
-    html += "<th class='right'>" + money(totalTax) + "</th>";
-    html += "</tr>";
-    html += "</table>";
-
-    document.getElementById("tableWrap").innerHTML = html;
-    showStatus("Information loaded successfully.", "ok");
-  } catch (err) {
-    renderEmptyTable("Could not load data.");
-    showStatus(err.message || "Failed loading report", "error");
-    console.error(err);
-  }
-}
+          if (!byProperty[propertyName]) {
+            byProperty[propertyName] = {
+              property: propertyName,
+              reportTo: getReportTaxTo(city, propertyName),
+              amountToReport: 0,
+              totalTax: 0
+            };
+          }
 
           byProperty[propertyName].amountToReport += amountToReport;
           byProperty[propertyName].totalTax += tax;
