@@ -33,7 +33,7 @@
 
     .toolbar {
       display: grid;
-      grid-template-columns: 180px 180px 220px;
+      grid-template-columns: 180px 180px 220px 220px;
       gap: 12px;
       align-items: end;
       justify-content: center;
@@ -68,6 +68,14 @@
 
     button:hover {
       background: #0b4e40;
+    }
+
+    .secondary-btn {
+      background: #1f4b99;
+    }
+
+    .secondary-btn:hover {
+      background: #183d7d;
     }
 
     .status {
@@ -147,31 +155,32 @@
       background: #fafcfd;
     }
 
-    .note {
-      margin-top: 14px;
-      font-size: 12px;
-      color: #61767f;
-    }
-
-    .debug {
-      margin-top: 14px;
-      padding: 12px;
-      background: #f8fafc;
-      border: 1px solid #d8e2e7;
-      border-radius: 8px;
-      font-size: 12px;
-      color: #425962;
-      line-height: 1.6;
-    }
-
     @media (max-width: 980px) {
       .toolbar { grid-template-columns: 1fr; }
       .cards { grid-template-columns: 1fr 1fr; }
     }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .wrap {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+        max-width: 100%;
+      }
+
+      .toolbar, .status {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap" id="reportRoot">
     <h1>📊 REPORT TAXES</h1>
 
     <div class="toolbar">
@@ -185,6 +194,9 @@
       </div>
       <div>
         <button id="runBtn" type="button">RUN REPORT</button>
+      </div>
+      <div>
+        <button id="pdfBtn" type="button" class="secondary-btn">DOWNLOAD PDF</button>
       </div>
     </div>
 
@@ -210,11 +222,6 @@
     </div>
 
     <div id="tableWrap"></div>
-    <div id="debugWrap"></div>
-
-    <div class="note">
-      This version paginates Guesty results, parses city from address when city is blank, and does not drop rows only because source is empty.
-    </div>
   </div>
 
   <script>
@@ -224,8 +231,11 @@
       "myrtle beach": "SC, MB, HC",
       "north myrtle beach": "SC, NMB, HC",
       "surfside beach": "SC, SSB, HC",
-      "garden city": "SC, HC",
-      "murrells inlet": "SC, HC",
+      "garden city": "SC, GTC",
+      "georgetown": "SC, GTC",
+      "pawleys island": "SC, GTC",
+      "litchfield": "SC, GTC",
+      "murrells inlet": "SC, GTC",
       "conway": "SC, HC"
     };
 
@@ -359,6 +369,9 @@
       if (a.includes("myrtle beach")) return "Myrtle Beach";
       if (a.includes("surfside beach")) return "Surfside Beach";
       if (a.includes("garden city")) return "Garden City";
+      if (a.includes("georgetown")) return "Georgetown";
+      if (a.includes("pawleys island")) return "Pawleys Island";
+      if (a.includes("litchfield")) return "Litchfield";
       if (a.includes("murrells inlet")) return "Murrells Inlet";
       if (a.includes("conway")) return "Conway";
       return "";
@@ -477,7 +490,10 @@
       );
     }
 
-    function getReportTaxTo(city) {
+    function getReportTaxTo(city, propertyName) {
+      const property = (propertyName || "").toUpperCase().trim();
+      if (property.startsWith("GC -")) return "SC, GTC";
+
       const key = (city || "").toLowerCase().trim();
       return CITY_REPORT_MAP[key] || "SC, HC";
     }
@@ -557,29 +573,6 @@
       `;
     }
 
-    function renderDebug(rows, filtered) {
-      const uniqueProps = [...new Set(rows.map(r =>
-        ((r["LISTING'S NICKNAME"] || "").trim() || (r["PROPERTY ADDRESS"] || "").trim() || "Unknown")
-      ))].sort();
-
-      const uniqueSources = [...new Set(
-        rows.map(r => ((r["SOURCE"] || "") + "").trim()).filter(Boolean)
-      )].sort();
-
-      const taxableRows = rows.filter(r => num(r["TOTAL PAYOUT"]) > 0 && getRowTaxTotal(r) > 0);
-
-      document.getElementById("debugWrap").innerHTML = `
-        <div class="debug">
-          <div><strong>Total fetched rows:</strong> ${rows.length}</div>
-          <div><strong>Filtered rows:</strong> ${filtered.length}</div>
-          <div><strong>Rows with payout and tax before source check:</strong> ${taxableRows.length}</div>
-          <div><strong>Unique properties fetched:</strong> ${uniqueProps.length}</div>
-          <div><strong>Property sample:</strong> ${escapeHtml(uniqueProps.slice(0, 20).join(" | "))}</div>
-          <div><strong>Sources found:</strong> ${escapeHtml(uniqueSources.join(" | ") || "NONE FOUND")}</div>
-        </div>
-      `;
-    }
-
     function rowLooksReportable(row) {
       const payout = num(row["TOTAL PAYOUT"]);
       const tax = getRowTaxTotal(row);
@@ -604,7 +597,6 @@
     async function runReport() {
       document.getElementById("cards").style.display = "none";
       document.getElementById("tableWrap").innerHTML = "";
-      document.getElementById("debugWrap").innerHTML = "";
       showStatus("Loading Guesty data...", "ok");
 
       try {
@@ -613,24 +605,12 @@
         const rows = await fetchGuestyRowsPaged();
         const { from, to } = getDateRange(month, year);
 
-        console.log("RAW MAPPED ROWS", rows.slice(0, 20));
-        console.log("SOURCE CHECK SAMPLE", rows.slice(0, 20).map(r => ({
-          property: r["LISTING'S NICKNAME"],
-          checkIn: r["CHECK-IN DATE"],
-          source: r["SOURCE"],
-          payout: r["TOTAL PAYOUT"],
-          tax: r["TAXES"]
-        })));
-
         const filtered = rows.filter(row => {
           const checkIn = (row["CHECK-IN DATE"] || "").toString().trim();
           if (!checkIn) return false;
           if (checkIn < from || checkIn > to) return false;
           return rowLooksReportable(row);
         });
-
-        console.log("FILTERED ROWS", filtered.slice(0, 50));
-        renderDebug(rows, filtered);
 
         const byProperty = {};
         let totalReservations = 0;
@@ -651,7 +631,7 @@
           if (!byProperty[propertyName]) {
             byProperty[propertyName] = {
               property: propertyName,
-              reportTo: getReportTaxTo(city),
+              reportTo: getReportTaxTo(city, propertyName),
               amountToReport: 0,
               totalTax: 0
             };
@@ -709,6 +689,10 @@
       }
     }
 
+    function downloadPdf() {
+      window.print();
+    }
+
     function populateMonthDropdown() {
       const months = [
         "January", "February", "March", "April", "May", "June",
@@ -745,6 +729,7 @@
     document.getElementById("monthSelect").value = now.getMonth() + 1;
     document.getElementById("yearSelect").value = now.getFullYear();
     document.getElementById("runBtn").addEventListener("click", runReport);
+    document.getElementById("pdfBtn").addEventListener("click", downloadPdf);
     window.addEventListener("load", runReport);
   </script>
 </body>
