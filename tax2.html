@@ -834,6 +834,11 @@ document.getElementById("tableWrap").innerHTML = html;
     }
 
     function downloadPdf() {
+      const m = Number(document.getElementById('monthSelect').value);
+      const y = Number(document.getElementById('yearSelect').value);
+      const d = new Date(y, m, 0);
+      const period = d.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+      document.title = 'Ocean Vacations Tax Report - ' + period;
       window.print();
     }
 
@@ -912,6 +917,7 @@ document.getElementById("tableWrap").innerHTML = html;
   const status=(message,error=false)=>{ const el=$('officialFormsStatus');el.textContent=message;el.style.color=error?'#a12222':'#175f47'; };
   const setActions=show=>{ $('officialFormsActions').hidden=!show; $('officialFormsActions').style.display=show?'flex':'none'; };
   const lastDay=(m,y)=>`${String(m).padStart(2,'0')}/${String(new Date(y,m,0).getDate()).padStart(2,'0')}/${y}`;
+  const periodName=(m,y)=>new Date(y,m,0).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   const today=()=>{const d=new Date();return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;};
   function currentData(){
     const snapshot=window.oceanTaxFormSnapshot;
@@ -1169,13 +1175,16 @@ document.getElementById("tableWrap").innerHTML = html;
       const pages=await combined.copyPages(source,source.getPageIndices());
       pages.forEach(page=>combined.addPage(page));
     }
+    const period = prepared && prepared.report ? periodName(prepared.report.month,prepared.report.year) : periodName(Number($('monthSelect').value),Number($('yearSelect').value));
+    combined.setTitle('Georgetown Surfside Horry Tax Forms - '+period);
+    combined.setSubject('Ocean Vacations local tax forms, period ended '+period);
     return new Uint8Array(await combined.save());
   }
   function showPreview(){
     if(!prepared) throw Error('Prepare the forms first.');
     if(previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl=URL.createObjectURL(new Blob([prepared.combined],{type:'application/pdf'}));
-    $('taxPdfTitle').textContent='Georgetown + Surfside Beach + Horry County — '+lastDay(prepared.report.month,prepared.report.year);
+    $('taxPdfTitle').textContent='Georgetown + Surfside Beach + Horry County — '+periodName(prepared.report.month,prepared.report.year);
     pdfFrame.src=previewUrl+'#toolbar=0&navpanes=0';
     overlay.hidden=false;overlay.style.display='flex';
     document.body.style.overflow='hidden';
@@ -1245,6 +1254,7 @@ document.getElementById("tableWrap").innerHTML = html;
     {group:'SC, GTC',county:'Georgetown',municipality:'Unincorporated Georgetown',st3t:'1022',localConfirmed:true,localRate:.01}
   ];
   let ready=null, url=null;
+  const periodName=(m,y)=>new Date(y,m,0).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   function changeStatus(txt,error=false){ const el=$('scStateStatus'); el.textContent=txt;el.style.color=error?'#a12222':'#175f47'; }
   function snapshotData(){
     const source=window.oceanTaxFormSnapshot;
@@ -1349,13 +1359,13 @@ document.getElementById("tableWrap").innerHTML = html;
     XLSX.utils.book_append_sheet(exportBook,exportSheet,book.SheetNames[0] || 'Locations');
     let bytes;
     try {
-      bytes=XLSX.write(exportBook,{bookType:'xls',type:'array'});
+      bytes=XLSX.write(exportBook,{bookType:'xlsx',type:'array'});
     } catch (err) {
       throw Error('Unable to create MyDORWAY Excel file: '+(err.message||err));
     }
-    const href=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.ms-excel'}));
+    const href=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     const a=document.createElement('a');a.href=href;
-    a.download=`MyDORWAY_Locations_${r.year}_${String(r.month).padStart(2,'0')}.xls`;
+    a.download=`MyDORWAY_Locations_${periodName(r.month,r.year).replace(/ /g,'_')}.xlsx`;
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),15000);
     changeStatus('Official MyDORWAY Excel prepared: '+rows.length+' properties; taxable revenue '+fmt(r.total)+'. Review before uploading.');
   }
@@ -1382,7 +1392,9 @@ document.getElementById("tableWrap").innerHTML = html;
       if(line){page.drawText(line,{x:30+indent,y,size,font:isBold?bold:regular,color});y-=size+5;}
     }
     function hr(){page.drawLine({start:{x:30,y:y+4},end:{x:582,y:y+4},thickness:.65,color:rgb(.82,.87,.9)});y-=9;}
-    const period=new Date(r.year,r.month,0).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    const period=periodName(r.month,r.year);
+    pdf.setTitle('SC State Taxes MyDORWAY - '+period);
+    pdf.setSubject('Ocean Vacations MyDORWAY preparation, period ended '+period);
     newPage('SC STATE TAXES - MyDORWAY preparation worksheet');
     write('OCEAN VACATIONS INC  |  Period ended '+period+'  |  Account/File Number: 120427001',9,true);
     write('This is NOT an official filed ST-388 return. Review against MyDORWAY before submitting.',9,false,0,gray);
@@ -1411,7 +1423,7 @@ document.getElementById("tableWrap").innerHTML = html;
     if(r.hasMissingAddress)write('WARNING: At least one property is missing its full address.',9,true);
     newPage('ACCOMMODATIONS LIST OF LOCATIONS - REVIEW');
     write('Reporting period: '+period+'  |  All properties configured in the dashboard (including $0.00)',9,true);
-    write('This is a review schedule. Use DOWNLOAD MYDORWAY EXCEL to create the upload workbook from your official template.',9);
+    write('This is a review schedule. Use DOWNLOAD MYDORWAY EXCEL to prepare the Excel workbook; verify it before uploading.',9);
     hr();
     r.groups.forEach(g=>{
       write(`${g.cat.county} / ${g.cat.municipality} - ${fmt(g.revenue)}`,10,true);
